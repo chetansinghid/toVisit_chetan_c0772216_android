@@ -5,12 +5,22 @@ import androidx.fragment.app.FragmentActivity;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
+import android.location.Address;
+import android.location.Geocoder;
 import android.location.Location;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.View;
+import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.Spinner;
+import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.placestovisit.dataHandler.Place;
+import com.example.placestovisit.dataHandler.PlacesHelperRepository;
 import com.example.placestovisit.networking.GetNearbyPlaces;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
@@ -22,15 +32,28 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
 import org.json.JSONObject;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
     private GoogleMap mMap;
     private LatLng myLocation;
-    private LatLng myPlacePostion;
+    private LatLng myPlacePosition;
+    private Marker myPlaceMarker;
+    private ArrayList<String> myPlaceName;
+    private Place place;
+    private Button setAsMyPlaceButton;
+    private TextView showDistanceView;
+    private TextView showDistanceDetailsView;
+    private boolean isNew = true;
+    private PlacesHelperRepository placesHelperRepository;
 
 //    constant strings
     private static final long UPDATE_INTERVAL = 5000;
@@ -51,6 +74,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
+        startLocationUpdate();
+        setupDatabaseMethods();
+        setupButtonsAndTextViews();
     }
 
     @Override
@@ -61,10 +87,18 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
-        startLocationUpdate();
         setupInitialMapView();
         setupAddPlaceGesture();
+        setUpMarkerDragGesture();
+        checkIfSavedLocationOpened();
+        setupSpinnerHandler();
+    }
 
+//    initial load methods
+
+    private void setupButtonsAndTextViews() {
+        showDistanceView = findViewById(R.id.distance_text_view);
+        showDistanceDetailsView = findViewById(R.id.distance_text_view_details);
     }
 
     private void setupInitialMapView() {
@@ -81,20 +115,151 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mMap.setOnMapLongClickListener(new GoogleMap.OnMapLongClickListener() {
             @Override
             public void onMapLongClick(LatLng latLng) {
-                MarkerOptions markerOptions = new MarkerOptions();
-                markerOptions.position(latLng);
-                markerOptions.draggable(true);
-                mMap.addMarker(markerOptions);
-                myPlacePostion = latLng;
+                if(myPlaceMarker == null) {
+                    addMarkerToMap(latLng);
+                }
             }
         });
     }
 
+    private void setUpMarkerDragGesture() {
+        mMap.setOnMarkerDragListener(new GoogleMap.OnMarkerDragListener() {
+            @Override
+            public void onMarkerDragStart(Marker marker) {
+                marker.hideInfoWindow();
+            }
+
+            @Override
+            public void onMarkerDrag(Marker marker) {
+
+            }
+
+            @Override
+            public void onMarkerDragEnd(Marker marker) {
+                myPlacePosition = marker.getPosition();
+                myPlaceName = getLocationAddressDetails(myPlacePosition);
+//                updates marker
+                marker.setTitle(myPlaceName.get(0));
+                marker.setSnippet(myPlaceName.get(1));
+//                updates object
+                place.setPlaceLat(myPlacePosition.latitude);
+                place.setPlaceLong(myPlacePosition.longitude);
+                place.setPlaceName(myPlaceName.get(0));
+                place.setPlaceDetails(myPlaceName.get(1));
+//                saves object
+                placesHelperRepository.updatePlaceInDatabase(place);
+//                updates upper textview
+                setDistanceTextView();
+            }
+        });
+    }
+
+    private void setupSpinnerHandler() {
+        Spinner spinner = findViewById(R.id.select_places);
+        ArrayAdapter<CharSequence> spinnerAdapter = ArrayAdapter.createFromResource(MapsActivity.this, R.array.spinner_selection, android.R.layout.simple_spinner_dropdown_item);
+
+    }
+
+    private void setupDatabaseMethods() {
+        placesHelperRepository = new PlacesHelperRepository(MapsActivity.this.getApplication());
+    }
+
+    private void checkIfSavedLocationOpened() {
+        if(getIntent().hasExtra("saved")) {
+            isNew = false;
+            place = (Place) getIntent().getSerializableExtra("saved");
+            addMarkerToMap(new LatLng(place.getPlaceLat(), place.getPlaceLong()));
+        }
+    }
+
+    private void addMarkerToMap(LatLng latLng) {
+        myPlacePosition = latLng;
+        myPlaceName = getLocationAddressDetails(myPlacePosition);
+        MarkerOptions markerOptions = new MarkerOptions();
+        markerOptions.position(myPlacePosition);
+        markerOptions.draggable(true);
+        markerOptions.title(myPlaceName.get(0));
+        markerOptions.snippet(myPlaceName.get(1));
+        myPlaceMarker = mMap.addMarker(markerOptions);
+        setDistanceTextView();
+    }
+
     public void showDirections(View view) {
-        if(myPlacePostion != null) {
+        if(myPlacePosition != null) {
 
         }
     }
+
+    public void setAsFavorite(View view) {
+        if(myPlacePosition != null) {
+            if(isNew) {
+//                setAsMyPlaceButton.setBackgroundColor(Color.RED);
+                addPlaceToDatabase();
+                isNew = false;
+            }
+            else {
+//                setAsMyPlaceButton.setBackgroundColor(Color.YELLOW);
+                removeMarkerAndDeletePlace();
+                isNew = true;
+            }
+        }
+    }
+
+    private void addPlaceToDatabase() {
+        place = new Place(myPlaceName.get(0), myPlaceName.get(1), myPlacePosition.latitude, myPlacePosition.longitude);
+        placesHelperRepository.insertPlaceToDatabase(place);
+    }
+
+    private void removeMarkerAndDeletePlace() {
+        placesHelperRepository.deletePlaceFromDatabase(place);
+        myPlaceMarker.remove();
+        myPlaceMarker = null;
+        myPlacePosition = null;
+        myPlaceName = null;
+        place = null;
+        resetDistanceTextView();
+    }
+
+    private void setDistanceTextView() {
+        if(myPlaceMarker == null) {
+            resetDistanceTextView();
+        }
+        else {
+            showDistanceView.setText((String)myPlaceName.get(0));
+            showDistanceDetailsView.setText((String)"Distance");
+//            showDistanceView.setText(myPlaceName.get(0));
+//            String distance = "Distance: " + "getdistance";
+//            showDistanceDetailsView.setText(distance);
+        }
+    }
+
+    private void resetDistanceTextView() {
+        showDistanceView.setText("My Location");
+        showDistanceDetailsView.setText("Tap or search to add Location");
+    }
+
+
+//    helper methods
+
+    //  fetches the geocoder details of latlangs
+    private ArrayList<String> getLocationAddressDetails(LatLng location) {
+        ArrayList<String> addressDetails = new ArrayList<>();
+        try {
+            Geocoder geocoder = new Geocoder(MapsActivity.this, Locale.getDefault());
+            List<Address> addressList = geocoder.getFromLocation(location.latitude, location.longitude, 1);
+            Address address = addressList.get(0);
+            String title = address.getThoroughfare() + ", " + address.getSubThoroughfare();
+            String snippet = address.getLocality() + ", " + address.getAdminArea();
+            addressDetails.add(title);
+            addressDetails.add(snippet);
+        } catch (Exception exception) {
+            Log.i("Geolocation fetch error", exception.getMessage());
+            addressDetails.add("");
+            addressDetails.add("");
+        }
+        return addressDetails;
+    }
+
 
     private void showNearbyPlaces(String url) {
         Object[] dataTransfer;
@@ -117,7 +282,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private String getDirectionUrl() {
         StringBuilder googleDirectionUrl = new StringBuilder("https://maps.googleapis.com/maps/api/directions/json?");
         googleDirectionUrl.append("origin="+myLocation.latitude+","+myLocation.longitude);
-        googleDirectionUrl.append(("&destination="+myPlacePostion.latitude+","+myPlacePostion.longitude));
+        googleDirectionUrl.append(("&destination="+myPlacePosition.latitude+","+myPlacePosition.longitude));
         googleDirectionUrl.append("&key="+getString(R.string.google_place_key));
         return googleDirectionUrl.toString();
     }

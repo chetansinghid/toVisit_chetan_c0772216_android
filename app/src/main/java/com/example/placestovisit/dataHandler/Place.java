@@ -4,15 +4,18 @@ import androidx.annotation.NonNull;
 import androidx.room.Entity;
 import androidx.room.PrimaryKey;
 
+import java.io.Serializable;
 import java.util.Calendar;
 import java.util.Date;
 
 @Entity(tableName = "place_data")
-public class Place {
+public class Place implements Serializable {
     @PrimaryKey(autoGenerate = true)
     private int id;
     @NonNull
     private String placeName;
+    @NonNull
+    private String placeDetails;
     @NonNull
     private Date placeSavedDate;
     @NonNull
@@ -23,8 +26,9 @@ public class Place {
     private boolean placeVisited;
 
 //    constructor
-    public Place(@NonNull String placeName, double placeLat, double placeLong) {
+    public Place(@NonNull String placeName, @NonNull String placeDetails, double placeLat, double placeLong) {
         this.placeName = placeName;
+        this.placeDetails = placeDetails;
         this.placeLat = placeLat;
         this.placeLong = placeLong;
         this.placeVisited = false;
@@ -35,6 +39,14 @@ public class Place {
 
 //    getters and setters
 
+
+    public String getPlaceDetails() {
+        return placeDetails;
+    }
+
+    public void setPlaceDetails(String placeDetails) {
+        this.placeDetails = placeDetails;
+    }
 
     public int getId() {
         return id;
