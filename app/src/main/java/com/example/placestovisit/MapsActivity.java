@@ -7,7 +7,6 @@ import android.Manifest;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.Menu;
 import android.view.View;
 import android.widget.Toast;
@@ -104,7 +103,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         dataTransfer[1] = url;
         GetNearbyPlaces getNearbyPlaces = new GetNearbyPlaces();
         getNearbyPlaces.execute(dataTransfer);
-
     }
 
     private String getPlaceUrl(double latitude, double longitude, String placeType) {
@@ -125,7 +123,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     private void startLocationUpdate() {
-
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             return;
         }
