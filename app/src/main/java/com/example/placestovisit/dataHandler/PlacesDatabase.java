@@ -5,8 +5,10 @@ import android.content.Context;
 import androidx.room.Database;
 import androidx.room.Room;
 import androidx.room.RoomDatabase;
+import androidx.room.TypeConverters;
 
 @Database(entities = {Place.class}, version = 1, exportSchema = false)
+@TypeConverters({ConvertDatatype.class})
 public abstract class PlacesDatabase extends RoomDatabase  {
 
     private static final String PLACES_DB = "placesDatabase.db";

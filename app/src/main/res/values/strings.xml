@@ -1,4 +1,7 @@
 <resources>
     <string name="app_name">Places to Visit</string>
     <string name="title_activity_maps">Map</string>
+    <string name="search">Search Places</string>
+    <string name="main_screen_title">My Places</string>
+    <string name="add_place_button">+</string>
 </resources>
