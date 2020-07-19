@@ -1,6 +1,7 @@
 package com.example.placestovisit;
 
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -35,7 +36,7 @@ public class PlaceListAdapter extends RecyclerView.Adapter<PlaceListAdapter.Plac
     }
 
     @Override
-    public void onBindViewHolder(@NonNull PlaceListHolder holder, int position) {
+    public void onBindViewHolder(@NonNull PlaceListHolder holder, final int position) {
         holder.placeName.setText(placeList.get(position).getPlaceName());
         if(placeList.get(position).isPlaceVisited()) {
             holder.cellLayout.setBackgroundColor(Color.rgb(188, 245, 197));
@@ -43,6 +44,15 @@ public class PlaceListAdapter extends RecyclerView.Adapter<PlaceListAdapter.Plac
         else {
             holder.cellLayout.setBackgroundColor(Color.rgb(245, 197, 66));
         }
+
+        holder.cellLayout.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent(context, MapsActivity.class);
+                intent.putExtra("saved", placeList.get(position));
+                context.startActivity(intent);
+            }
+        });
     }
 
     @Override
