@@ -4,11 +4,4 @@
     <string name="search">Search Places</string>
     <string name="main_screen_title">My Places</string>
     <string name="add_place_button">+</string>
-
-    <string-array name="spinner_selection">
-        <item>None</item>
-        <item>Restaraunts</item>
-        <item>Coffee Shops</item>
-        <item>Museums</item>
-    </string-array>
 </resources>

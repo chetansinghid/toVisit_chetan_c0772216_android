@@ -156,7 +156,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private void setupSpinnerHandler() {
         Spinner spinner = findViewById(R.id.select_places);
-        ArrayAdapter<CharSequence> spinnerAdapter = ArrayAdapter.createFromResource(MapsActivity.this, R.array.spinner_selection, android.R.layout.simple_spinner_dropdown_item);
 
     }
 

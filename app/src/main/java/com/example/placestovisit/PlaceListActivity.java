@@ -1,8 +1,11 @@
 package com.example.placestovisit;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.recyclerview.widget.ItemTouchHelper;
+import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import android.Manifest;
@@ -16,25 +19,40 @@ import android.widget.Toast;
 import com.example.placestovisit.dataHandler.Place;
 import com.example.placestovisit.dataHandler.PlacesHelperRepository;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class PlaceListActivity extends AppCompatActivity {
 
     private static final int PERMISSIONS_REQUEST = 1;
     private PlacesHelperRepository placesHelperRepository;
     private RecyclerView recyclerView;
+    private List<Place> placeList = new ArrayList<>();
+    private PlaceListAdapter placeListAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_place_list);
         checkRequiredPermissions();
-        setupInitialViews();
+        setupInitialViewsAndData();
+        setupRecyclerView();
+        setupItemTouch();
     }
 
-    private void setupInitialViews() {
+    private void setupInitialViewsAndData() {
         recyclerView = findViewById(R.id.recycler_view);
         placesHelperRepository = new PlacesHelperRepository(this.getApplication());
+        placeList = placesHelperRepository.getAllPlaces();
     }
 
+
+    private void setupRecyclerView() {
+        recyclerView.setHasFixedSize(true);
+        placeListAdapter = new PlaceListAdapter(placeList, PlaceListActivity.this);
+        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        recyclerView.setAdapter(placeListAdapter);
+    }
 
     @Override
     protected void onResume() {
@@ -49,8 +67,9 @@ public class PlaceListActivity extends AppCompatActivity {
     }
 
     private void resetResults() {
-        placesHelperRepository.getAllPlaces();
-
+        placeList = placesHelperRepository.getAllPlaces();
+        placeListAdapter.updateData(placeList);
+        placeListAdapter.notifyDataSetChanged();
     }
 
     public void addPlace(View view) {
@@ -82,4 +101,28 @@ public class PlaceListActivity extends AppCompatActivity {
             }
         }
     }
+
+    private void setupItemTouch() {
+        new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT|ItemTouchHelper.RIGHT) {
+            @Override
+            public boolean onMove(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, @NonNull RecyclerView.ViewHolder target) {
+                return false;
+            }
+
+            @Override
+            public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
+                Place place = placeListAdapter.getPlaceAtPosition(viewHolder.getAdapterPosition());
+                if(direction == ItemTouchHelper.LEFT) {
+                    placesHelperRepository.deletePlaceFromDatabase(place);
+                    resetResults();
+                }
+                else {
+                    place.setPlaceVisited(true);
+                    placesHelperRepository.updatePlaceInDatabase(place);
+                    resetResults();
+                }
+            }
+        }).attachToRecyclerView(recyclerView);
+    }
+
 }
