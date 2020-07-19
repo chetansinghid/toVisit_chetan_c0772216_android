@@ -25,46 +25,55 @@
                 android:id="@+id/imageView"
                 android:layout_width="50dp"
                 android:layout_height="50dp"
+                android:layout_marginRight="10dp"
                 android:foreground="@android:drawable/ic_menu_myplaces"
                 android:foregroundTint="#FFC107"
                 android:src="@android:drawable/ic_menu_myplaces"
                 map:layout_constraintBottom_toBottomOf="parent"
+                map:layout_constraintRight_toLeftOf="@id/text_view_constraint"
                 map:layout_constraintStart_toStartOf="parent"
-                map:layout_constraintTop_toTopOf="parent"
-                map:layout_constraintRight_toLeftOf="@id/distance_text_view"/>
+                map:layout_constraintTop_toTopOf="parent" />
 
-            <TextView
-                android:id="@+id/distance_text_view"
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/text_view_constraint"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_margin="10dp"
-                android:text="Tap or search for a place to add"
-                android:textSize="25sp"
-                android:textStyle="bold"
-                map:layout_constraintBottom_toTopOf="@+id/distance_text_view_details"
-                map:layout_constraintTop_toTopOf="parent"
-                map:layout_constraintLeft_toRightOf="@id/imageView"
-                map:layout_constraintRight_toLeftOf="@+id/select_places"
-                tools:layout_editor_absoluteX="10dp" />
-
-            <TextView
-                android:id="@+id/distance_text_view_details"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                map:layout_constraintLeft_toRightOf="@id/imageView"
-                map:layout_constraintRight_toLeftOf="@+id/select_places"
-                map:layout_constraintTop_toBottomOf="@id/distance_text_view"
+                android:layout_height="match_parent"
+                map:layout_constraintStart_toEndOf="@+id/imageView"
+                map:layout_constraintEnd_toStartOf="@+id/select_maps"
                 map:layout_constraintBottom_toBottomOf="parent"
-                android:textSize="25sp"
-                android:text="TextView" />
+                map:layout_constraintTop_toTopOf="parent">
+
+                <TextView
+                    android:id="@+id/distance_text_view"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_margin="10dp"
+                    android:textSize="22sp"
+                    android:textStyle="bold"
+                    map:layout_constraintEnd_toEndOf="parent"
+                    map:layout_constraintBottom_toTopOf="@+id/distance_text_view_details"
+                    map:layout_constraintStart_toStartOf="parent"
+                    map:layout_constraintTop_toTopOf="parent" />
+
+                <TextView
+                    android:id="@+id/distance_text_view_details"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="22sp"
+                    map:layout_constraintTop_toBottomOf="@+id/distance_text_view"
+                    map:layout_constraintBottom_toBottomOf="parent"
+                    map:layout_constraintEnd_toEndOf="parent"
+                    map:layout_constraintStart_toStartOf="parent" />
+            </androidx.constraintlayout.widget.ConstraintLayout>
 
             <Spinner
-                android:id="@+id/select_places"
-                android:layout_width="30dp"
+                android:id="@+id/select_maps"
+                android:layout_width="50dp"
                 android:layout_height="match_parent"
-                map:layout_constraintLeft_toRightOf="@id/distance_text_view"
+                android:layout_marginLeft="10dp"
                 map:layout_constraintBottom_toBottomOf="parent"
                 map:layout_constraintEnd_toEndOf="parent"
+                map:layout_constraintLeft_toRightOf="@id/text_view_constraint"
                 map:layout_constraintTop_toTopOf="parent" />
         </androidx.constraintlayout.widget.ConstraintLayout>
 

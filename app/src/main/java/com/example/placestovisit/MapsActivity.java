@@ -1,18 +1,20 @@
 package com.example.placestovisit;
 
+import androidx.annotation.RequiresApi;
 import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.FragmentActivity;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
-import android.graphics.Color;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.Spinner;
@@ -34,6 +36,7 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import org.json.JSONObject;
 
@@ -49,7 +52,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private Marker myPlaceMarker;
     private ArrayList<String> myPlaceName;
     private Place place;
-    private Button setAsMyPlaceButton;
     private TextView showDistanceView;
     private TextView showDistanceDetailsView;
     private boolean isNew = true;
@@ -74,9 +76,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
-        startLocationUpdate();
+
         setupDatabaseMethods();
         setupButtonsAndTextViews();
+        setupSpinnerHandler();
     }
 
     @Override
@@ -87,11 +90,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
+        startLocationUpdate();
         setupInitialMapView();
         setupAddPlaceGesture();
         setUpMarkerDragGesture();
         checkIfSavedLocationOpened();
-        setupSpinnerHandler();
+//        setupCameraZoom();
     }
 
 //    initial load methods
@@ -109,6 +113,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mMap.setMyLocationEnabled(true);
         mMap.getUiSettings().setZoomControlsEnabled(true);
         mMap.getUiSettings().setMapToolbarEnabled(true);
+
     }
 
     private void setupAddPlaceGesture() {
@@ -155,8 +160,44 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     private void setupSpinnerHandler() {
-        Spinner spinner = findViewById(R.id.select_places);
+        Spinner spinner = findViewById(R.id.select_maps);
+        ArrayAdapter<CharSequence> spinnerAdapter = ArrayAdapter.createFromResource(this, R.array.map_types, android.R.layout.simple_spinner_item);
+        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinner.setAdapter(spinnerAdapter);
+        spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
+                switch (i) {
+                    case 0:  mMap.setMapType(GoogleMap.MAP_TYPE_NORMAL);
+                    break;
+                    case 1: mMap.setMapType(GoogleMap.MAP_TYPE_HYBRID);
+                    break;
+                    case 2: mMap.setMapType(GoogleMap.MAP_TYPE_SATELLITE);
+                    break;
+                    case 3: mMap.setMapType(GoogleMap.MAP_TYPE_TERRAIN);
+                }
+            }
 
+            @Override
+            public void onNothingSelected(AdapterView<?> adapterView) {
+
+            }
+        });
+    }
+
+    private void setupCameraZoom() {
+        if(isNew) {
+            if(myLocation != null) {
+                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(myLocation, 10));
+            }
+        }
+        else {
+            if(myLocation != null) {
+                double lat = (myPlacePosition.latitude + myLocation.latitude) / 2;
+                double lon = (myLocation.longitude + myPlacePosition.longitude) / 2;
+                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(lat, lon), 10));
+            }
+        }
     }
 
     private void setupDatabaseMethods() {
@@ -165,6 +206,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private void checkIfSavedLocationOpened() {
         if(getIntent().hasExtra("saved")) {
+            Log.i("maps activity","reaching here!");
             isNew = false;
             place = (Place) getIntent().getSerializableExtra("saved");
             addMarkerToMap(new LatLng(place.getPlaceLat(), place.getPlaceLong()));
@@ -189,15 +231,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.Q)
     public void setAsFavorite(View view) {
         if(myPlacePosition != null) {
             if(isNew) {
-//                setAsMyPlaceButton.setBackgroundColor(Color.RED);
                 addPlaceToDatabase();
                 isNew = false;
             }
             else {
-//                setAsMyPlaceButton.setBackgroundColor(Color.YELLOW);
                 removeMarkerAndDeletePlace();
                 isNew = true;
             }
@@ -301,7 +342,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             public void onLocationResult(LocationResult locationResult) {
                 Location location = locationResult.getLastLocation();
                 myLocation = new LatLng(location.getLatitude(), location.getLongitude());
-
+                Log.i("im method!", "Location getting set");
             }
         };
         fusedLocationProviderClient.requestLocationUpdates(locationRequest, locationCallback, null);

@@ -34,7 +34,7 @@ public class PlaceListActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_place_list);
-        checkRequiredPermissions();
+        askPermissions();
         setupInitialViewsAndData();
         setupRecyclerView();
         setupItemTouch();
@@ -100,6 +100,15 @@ public class PlaceListActivity extends AppCompatActivity {
 
             }
         }
+    }
+
+    private void askPermissions() {
+        ActivityCompat.requestPermissions(PlaceListActivity.this,
+                new String[]{Manifest.permission.READ_EXTERNAL_STORAGE,
+                        Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                        Manifest.permission.ACCESS_FINE_LOCATION,
+                        Manifest.permission.ACCESS_COARSE_LOCATION},
+                PERMISSIONS_REQUEST);
     }
 
     private void setupItemTouch() {
