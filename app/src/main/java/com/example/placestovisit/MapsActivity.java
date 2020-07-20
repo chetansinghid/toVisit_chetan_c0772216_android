@@ -1,28 +1,29 @@
 package com.example.placestovisit;
 
-import androidx.annotation.RequiresApi;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
-import androidx.fragment.app.FragmentActivity;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
-import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
+import android.widget.SearchView;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.placestovisit.dataHandler.Place;
 import com.example.placestovisit.dataHandler.PlacesHelperRepository;
+import com.example.placestovisit.networking.GetDirectionsData;
 import com.example.placestovisit.networking.GetNearbyPlaces;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
@@ -36,19 +37,18 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
-
-import org.json.JSONObject;
+import com.google.android.gms.maps.model.Polyline;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
+public class MapsActivity extends AppCompatActivity implements OnMapReadyCallback, PlaceDataInterface {
 
     private GoogleMap mMap;
     private LatLng myLocation;
     private LatLng myPlacePosition;
+    private LatLng getMyPlacePositionTemp;
     private Marker myPlaceMarker;
     private ArrayList<String> myPlaceName;
     private Place place;
@@ -56,6 +56,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private TextView showDistanceDetailsView;
     private boolean isNew = true;
     private PlacesHelperRepository placesHelperRepository;
+    private Polyline currentPolyline;
 
 //    constant strings
     private static final long UPDATE_INTERVAL = 5000;
@@ -81,29 +82,86 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         setupButtonsAndTextViews();
         setupSpinnerHandler();
     }
-
+// button handlers
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        return super.onCreateOptionsMenu(menu);
-    }
+        MenuInflater menuInflater = getMenuInflater();
+        menuInflater.inflate(R.menu.maps_menu, menu);
+        MenuItem searchItem = menu.findItem(R.id.search_place);
+        SearchView searchView = (SearchView) searchItem.getActionView();
 
-    @Override
-    public void onMapReady(GoogleMap googleMap) {
-        mMap = googleMap;
-        startLocationUpdate();
-        setupInitialMapView();
-        setupAddPlaceGesture();
-        setUpMarkerDragGesture();
-        checkIfSavedLocationOpened();
-//        setupCameraZoom();
-    }
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @Override
+            public boolean onQueryTextSubmit(String s) {
+                showNearbyPlaces(getPlaceUrl(s));
+                return false;
+            }
 
-//    initial load methods
+            @Override
+            public boolean onQueryTextChange(String s) {
+                return false;
+            }
+        });
+
+        searchView.setOnCloseListener(new SearchView.OnCloseListener() {
+            @Override
+            public boolean onClose() {
+                mMap.clear();
+                if(myPlaceMarker != null) {
+                    addMarkerToMap(myPlacePosition);
+                }
+                return false;
+            }
+        });
+        return true;
+    }
 
     private void setupButtonsAndTextViews() {
         showDistanceView = findViewById(R.id.distance_text_view);
         showDistanceDetailsView = findViewById(R.id.distance_text_view_details);
     }
+
+    private void setupDatabaseMethods() {
+        placesHelperRepository = new PlacesHelperRepository(MapsActivity.this.getApplication());
+    }
+
+    private void setupSpinnerHandler() {
+        Spinner spinner = findViewById(R.id.select_maps);
+        ArrayAdapter<CharSequence> spinnerAdapter = ArrayAdapter.createFromResource(this, R.array.map_types, android.R.layout.simple_spinner_item);
+        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinner.setAdapter(spinnerAdapter);
+        spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
+                switch (i) {
+                    case 0:  mMap.setMapType(GoogleMap.MAP_TYPE_NORMAL);
+                        break;
+                    case 1: mMap.setMapType(GoogleMap.MAP_TYPE_HYBRID);
+                        break;
+                    case 2: mMap.setMapType(GoogleMap.MAP_TYPE_SATELLITE);
+                        break;
+                    case 3: mMap.setMapType(GoogleMap.MAP_TYPE_TERRAIN);
+                }
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> adapterView) {
+
+            }
+        });
+    }
+
+//map view and button handlers
+    @Override
+    public void onMapReady(GoogleMap googleMap) {
+        mMap = googleMap;
+        startLocationUpdate();
+        setupInitialMapView();
+        setUpMapGestures();
+        checkIfSavedLocationOpened();
+    }
+
+//    initial load methods
 
     private void setupInitialMapView() {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -116,11 +174,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     }
 
+    private void setUpMapGestures() {
+        setupAddPlaceGesture();
+        setUpMarkerDragGesture();
+        setupMarkerClickGesture();
+    }
+
     private void setupAddPlaceGesture() {
         mMap.setOnMapLongClickListener(new GoogleMap.OnMapLongClickListener() {
             @Override
             public void onMapLongClick(LatLng latLng) {
-                if(myPlaceMarker == null) {
+                if(place == null) {
                     addMarkerToMap(latLng);
                 }
             }
@@ -141,67 +205,30 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
             @Override
             public void onMarkerDragEnd(Marker marker) {
-                myPlacePosition = marker.getPosition();
-                myPlaceName = getLocationAddressDetails(myPlacePosition);
-//                updates marker
-                marker.setTitle(myPlaceName.get(0));
-                marker.setSnippet(myPlaceName.get(1));
-//                updates object
-                place.setPlaceLat(myPlacePosition.latitude);
-                place.setPlaceLong(myPlacePosition.longitude);
-                place.setPlaceName(myPlaceName.get(0));
-                place.setPlaceDetails(myPlaceName.get(1));
+                addMarkerToMap(marker.getPosition());
+                updatePlaceToDb();
+            }
+        });
+    }
+
+    private void updatePlaceToDb() {
+        //                updates object
+        place.setPlaceLat(myPlacePosition.latitude);
+        place.setPlaceLong(myPlacePosition.longitude);
+        place.setPlaceName(myPlaceName.get(0));
+        place.setPlaceDetails(myPlaceName.get(1));
 //                saves object
-                placesHelperRepository.updatePlaceInDatabase(place);
-//                updates upper textview
-                setDistanceTextView();
+        placesHelperRepository.updatePlaceInDatabase(place);
+    }
+
+    private void setupMarkerClickGesture() {
+        mMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
+            @Override
+            public boolean onMarkerClick(Marker marker) {
+                getMyPlacePositionTemp = (LatLng) marker.getTag();
+                return false;
             }
         });
-    }
-
-    private void setupSpinnerHandler() {
-        Spinner spinner = findViewById(R.id.select_maps);
-        ArrayAdapter<CharSequence> spinnerAdapter = ArrayAdapter.createFromResource(this, R.array.map_types, android.R.layout.simple_spinner_item);
-        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        spinner.setAdapter(spinnerAdapter);
-        spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
-                switch (i) {
-                    case 0:  mMap.setMapType(GoogleMap.MAP_TYPE_NORMAL);
-                    break;
-                    case 1: mMap.setMapType(GoogleMap.MAP_TYPE_HYBRID);
-                    break;
-                    case 2: mMap.setMapType(GoogleMap.MAP_TYPE_SATELLITE);
-                    break;
-                    case 3: mMap.setMapType(GoogleMap.MAP_TYPE_TERRAIN);
-                }
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> adapterView) {
-
-            }
-        });
-    }
-
-    private void setupCameraZoom() {
-        if(isNew) {
-            if(myLocation != null) {
-                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(myLocation, 10));
-            }
-        }
-        else {
-            if(myLocation != null) {
-                double lat = (myPlacePosition.latitude + myLocation.latitude) / 2;
-                double lon = (myLocation.longitude + myPlacePosition.longitude) / 2;
-                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(lat, lon), 10));
-            }
-        }
-    }
-
-    private void setupDatabaseMethods() {
-        placesHelperRepository = new PlacesHelperRepository(MapsActivity.this.getApplication());
     }
 
     private void checkIfSavedLocationOpened() {
@@ -214,6 +241,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     private void addMarkerToMap(LatLng latLng) {
+        mMap.clear();
         myPlacePosition = latLng;
         myPlaceName = getLocationAddressDetails(myPlacePosition);
         MarkerOptions markerOptions = new MarkerOptions();
@@ -226,23 +254,52 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     public void showDirections(View view) {
-        if(myPlacePosition != null) {
+        if(myPlacePosition != null && myLocation != null) {
+            String url = getDirectionUrl();
+            Object[] dataTransfer = new Object[3];
 
+            dataTransfer[0] = mMap;
+            dataTransfer[1] = url;
+            dataTransfer[2] = myPlacePosition;
+
+            GetDirectionsData getDirectionsData = new GetDirectionsData();
+            // execute asynchronously
+            System.out.print(url);
+            getDirectionsData.execute(dataTransfer);
         }
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.Q)
+
     public void setAsFavorite(View view) {
-        if(myPlacePosition != null) {
-            if(isNew) {
-                addPlaceToDatabase();
-                isNew = false;
-            }
-            else {
-                removeMarkerAndDeletePlace();
-                isNew = true;
+        if(getMyPlacePositionTemp == null) {
+            if(myPlacePosition != null) {
+                if(isNew) {
+                    addPlaceToDatabase();
+                    isNew = false;
+                    Toast.makeText(MapsActivity.this, "Place Added As Favorite!", Toast.LENGTH_LONG).show();
+                }
+                else {
+                    removeMarkerAndDeletePlace();
+                    isNew = true;
+                    Toast.makeText(MapsActivity.this, "Place Removed From Favorite!", Toast.LENGTH_LONG).show();
+                }
             }
         }
+        else {
+            addMarkerToMap(getMyPlacePositionTemp);
+            if(place == null) {
+
+                addPlaceToDatabase();
+                isNew = false;
+                Toast.makeText(MapsActivity.this, "Place Added As Favorite!", Toast.LENGTH_LONG).show();
+            }
+            else {
+                updatePlaceToDb();
+                Toast.makeText(MapsActivity.this, "Favorite Place Updated!", Toast.LENGTH_LONG).show();
+            }
+            getMyPlacePositionTemp = null;
+        }
+
     }
 
     private void addPlaceToDatabase() {
@@ -252,30 +309,28 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private void removeMarkerAndDeletePlace() {
         placesHelperRepository.deletePlaceFromDatabase(place);
-        myPlaceMarker.remove();
+        mMap.clear();
         myPlaceMarker = null;
         myPlacePosition = null;
         myPlaceName = null;
         place = null;
-        resetDistanceTextView();
+        showDistanceDetailsView.setText("");
+
     }
 
     private void setDistanceTextView() {
-        if(myPlaceMarker == null) {
-            resetDistanceTextView();
+        if(myLocation != null && myPlaceMarker != null) {
+            float[] results = new float[10];
+            Location.distanceBetween(myLocation.latitude, myLocation.longitude, myPlacePosition.latitude, myPlacePosition.longitude, results);
+            String yourLocation = "" + myPlaceName.get(0);
+            showDistanceView.setText((String) yourLocation);
+            String details = "Distance: " + Math.round(results[0]/100)/10.0 + " KM";
+            showDistanceDetailsView.setText((String)details);
         }
-        else {
-            showDistanceView.setText((String)myPlaceName.get(0));
-            showDistanceDetailsView.setText((String)"Distance");
-//            showDistanceView.setText(myPlaceName.get(0));
-//            String distance = "Distance: " + "getdistance";
-//            showDistanceDetailsView.setText(distance);
+        if(myLocation != null && myPlaceMarker == null) {
+            String text = getLocationAddressDetails(myLocation).get(0);
+            showDistanceView.setText(text);
         }
-    }
-
-    private void resetDistanceTextView() {
-        showDistanceView.setText("My Location");
-        showDistanceDetailsView.setText("Tap or search to add Location");
     }
 
 
@@ -288,7 +343,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             Geocoder geocoder = new Geocoder(MapsActivity.this, Locale.getDefault());
             List<Address> addressList = geocoder.getFromLocation(location.latitude, location.longitude, 1);
             Address address = addressList.get(0);
-            String title = address.getThoroughfare() + ", " + address.getSubThoroughfare();
+            String title = address.getSubThoroughfare() + ", " + address.getThoroughfare();
             String snippet = address.getLocality() + ", " + address.getAdminArea();
             addressDetails.add(title);
             addressDetails.add(snippet);
@@ -310,9 +365,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         getNearbyPlaces.execute(dataTransfer);
     }
 
-    private String getPlaceUrl(double latitude, double longitude, String placeType) {
+    private String getPlaceUrl(String placeType) {
         StringBuilder googlePlaceUrl = new StringBuilder("https://maps.googleapis.com/maps/api/place/nearbysearch/json?");
-        googlePlaceUrl.append("location="+latitude+","+longitude);
+        googlePlaceUrl.append("location="+myLocation.latitude+","+myLocation.longitude);
         googlePlaceUrl.append(("&radius="+RADIUS));
         googlePlaceUrl.append("&type="+placeType);
         googlePlaceUrl.append("&key="+getString(R.string.google_place_key));
@@ -342,10 +397,31 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             public void onLocationResult(LocationResult locationResult) {
                 Location location = locationResult.getLastLocation();
                 myLocation = new LatLng(location.getLatitude(), location.getLongitude());
+//                setupCameraZoom();
                 Log.i("im method!", "Location getting set");
             }
         };
         fusedLocationProviderClient.requestLocationUpdates(locationRequest, locationCallback, null);
+
+    }
+
+    private void setupCameraZoom() {
+        if(isNew) {
+            if(myLocation != null) {
+                mMap.moveCamera(CameraUpdateFactory.newLatLng(myLocation));
+            }
+        }
+        else {
+            if(myLocation != null) {
+                double lat = (myPlacePosition.latitude + myLocation.latitude) / 2;
+                double lon = (myLocation.longitude + myPlacePosition.longitude) / 2;
+                mMap.moveCamera(CameraUpdateFactory.newLatLng(new LatLng(lat, lon)));
+            }
+        }
+    }
+
+    @Override
+    public void destinationSelected() {
 
     }
 }

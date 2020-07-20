@@ -5,6 +5,7 @@ import android.os.AsyncTask;
 
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.maps.android.PolyUtil;
@@ -36,10 +37,11 @@ public class GetDirectionsData extends AsyncTask<Object, Void, String> {
 
     @Override
     protected void onPostExecute(String s) {
+        System.out.print("In post execute! " + s);
         HashMap<String, String> distances = null;
         DataParser directionParser = new DataParser();
         distances = directionParser.parseDistance(s);
-
+        System.out.print(distances);
         String distance = distances.get("distance");
         String duration = distances.get("duration");
 
@@ -54,11 +56,13 @@ public class GetDirectionsData extends AsyncTask<Object, Void, String> {
                 .title("Duration : " + duration)
                 .snippet("Distance : " + distance)
                 .draggable(true);
-        googleMap.addMarker(options);
+        Marker marker = googleMap.addMarker(options);
+        marker.showInfoWindow();
         for (int i=0; i<directionsList.length; i++) {
             PolylineOptions polylineOptions = new PolylineOptions()
                     .color(Color.RED)
                     .width(10)
+                    .clickable(true)
                     .addAll(PolyUtil.decode(directionsList[i]));
             googleMap.addPolyline(polylineOptions);
         }
