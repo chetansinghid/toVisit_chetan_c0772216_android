@@ -27,7 +27,7 @@
         android:background="@android:color/transparent"
         android:onClick="addPlace"
         android:text="@string/add_place_button"
-        android:textColor="@color/colorPrimary"
+        android:textColor="#FF9800"
         android:textSize="32sp"
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
@@ -45,20 +45,11 @@
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toBottomOf="@id/place_tv" />
 
-    <SearchView
-        android:id="@+id/search_view"
-        android:queryHint="@string/search"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/darkView_view"
-        app:layout_constraintRight_toRightOf="parent" />
-
     <TextView
         android:id="@+id/place_count"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        app:layout_constraintTop_toBottomOf="@id/search_view"
+        app:layout_constraintTop_toBottomOf="@id/darkView_view"
         app:layout_constraintBottom_toTopOf="@id/recycler_view"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"

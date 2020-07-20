@@ -9,15 +9,19 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import android.Manifest;
-import android.app.Application;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.Button;
 import android.widget.SearchView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.placestovisit.dataHandler.Place;
@@ -33,6 +37,8 @@ public class PlaceListActivity extends AppCompatActivity {
     private RecyclerView recyclerView;
     private List<Place> placeList = new ArrayList<>();
     private PlaceListAdapter placeListAdapter;
+    private TextView placeCountView;
+    private SearchView searchView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,8 +54,10 @@ public class PlaceListActivity extends AppCompatActivity {
     public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater menuInflater = getMenuInflater();
         menuInflater.inflate(R.menu.maps_menu, menu);
+
+
         MenuItem searchItem = menu.findItem(R.id.search_place);
-        SearchView searchView = (SearchView) searchItem.getActionView();
+        searchView = (SearchView) searchItem.getActionView();
 
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
@@ -60,7 +68,7 @@ public class PlaceListActivity extends AppCompatActivity {
             @Override
             public boolean onQueryTextChange(String s) {
                 resetResults();
-//                contactCountView.setVisibility(View.GONE);
+                placeCountView.setVisibility(View.GONE);
                 placeListAdapter.getFilter().filter(s);
                 return false;
             }
@@ -70,18 +78,82 @@ public class PlaceListActivity extends AppCompatActivity {
             @Override
             public boolean onClose() {
                 resetResults();
-//                contactCountView.setVisibility(View.VISIBLE);
+                placeCountView.setVisibility(View.VISIBLE);
                 return false;
             }
         });
+
         return true;
     }
 
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        if(item.getItemId() == R.id.show_info) {
+            AlertDialog.Builder builder = new AlertDialog.Builder(PlaceListActivity.this);
+            builder.setTitle("Welcome to My Place List!");
+            builder.setMessage("This is an app where you can save the places you want to visit." +
+                    "To save a place simply click on + button and you will be taken to a map scree." +
+                    "You can then simply long tap on map to add a place. Pressing on the star button will save the location!");
+
+            builder.setPositiveButton("Continue with tutorial", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialogInterface, int i) {
+                    AlertDialog.Builder builder = new AlertDialog.Builder(PlaceListActivity.this);
+                    builder.setTitle("Navigating the list view!");
+                    builder.setMessage("Once you have marked a place as favorite, you can see that on your home page." +
+                            "You can swipe right to mark it as visited, and the cell will highlight as Green as confirmation." +
+                            "You can also delete the place by swiping left.");
+                    builder.setPositiveButton("Continue with tutorial", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialogInterface, int i) {
+                            AlertDialog.Builder builder = new AlertDialog.Builder(PlaceListActivity.this);
+                            builder.setTitle("Navigating the map view!");
+                            builder.setMessage("You can open a place by tapping on its cell. Once opened, you can drag marker to" +
+                                    "change the place. You can press on star button again to delete the place. You can get directions" +
+                                    " to the place by pressing the directions button, and you can search for place on search bar");
+
+                            builder.setPositiveButton("Continue with tutorial", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialogInterface, int i) {
+                                    AlertDialog.Builder builder = new AlertDialog.Builder(PlaceListActivity.this);
+                                    builder.setTitle("Searching for places!");
+                                    builder.setMessage("You can add the place as favorite by tapping on the search results icon, and that" +
+                                            " will save it as your favorite, or replace it if you opened previously saved marker. You can" +
+                                            " see the distance and duration from the place on your app.");
+
+                                    builder.setNegativeButton("Start using the app!", null);
+                                    AlertDialog dialog = builder.create();
+                                    dialog.show();
+                                }
+                            });
+                            builder.setNegativeButton("Start using the app!", null);
+                            AlertDialog dialog = builder.create();
+                            dialog.show();
+                        }
+                    });
+                    builder.setNegativeButton("Start using the app!", null);
+                    AlertDialog dialog = builder.create();
+                    dialog.show();
+                }
+            });
+            builder.setNegativeButton("Start using the app!", null);
+            AlertDialog dialog = builder.create();
+            dialog.show();
+
+            return true;
+        }
+        else {
+            return super.onOptionsItemSelected(item);
+        }
+    }
 
     private void setupInitialViewsAndData() {
         recyclerView = findViewById(R.id.recycler_view);
         placesHelperRepository = new PlacesHelperRepository(this.getApplication());
         placeList = placesHelperRepository.getAllPlaces();
+        placeCountView = findViewById(R.id.place_count);
+        String text = placeList.size() + " Place(s)";
+        placeCountView.setText(text);
     }
 
 
@@ -108,6 +180,8 @@ public class PlaceListActivity extends AppCompatActivity {
         placeList = placesHelperRepository.getAllPlaces();
         placeListAdapter.updateData(placeList);
         placeListAdapter.notifyDataSetChanged();
+        String text = placeList.size() + " Place(s)";
+        placeCountView.setText(text);
     }
 
     public void addPlace(View view) {

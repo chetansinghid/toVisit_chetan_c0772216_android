@@ -11,6 +11,7 @@ import android.widget.Filterable;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.cardview.widget.CardView;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -39,15 +40,22 @@ public class PlaceListAdapter extends RecyclerView.Adapter<PlaceListAdapter.Plac
 
     @Override
     public void onBindViewHolder(@NonNull PlaceListHolder holder, final int position) {
-        holder.placeName.setText(placeList.get(position).getPlaceName());
-        if(placeList.get(position).isPlaceVisited()) {
-            holder.cellLayout.setBackgroundColor(Color.rgb(188, 245, 197));
+        String placeName;
+        if(placeList.get(position).getPlaceName() == null || placeList.get(position).getPlaceName().contains("null")) {
+            placeName = placeList.get(position).getPlaceSavedDate() + "";
         }
         else {
-            holder.cellLayout.setBackgroundColor(Color.rgb(245, 197, 66));
+            placeName = placeList.get(position).getPlaceName();
+        }
+        holder.placeName.setText(placeName);
+        if(placeList.get(position).isPlaceVisited()) {
+            holder.cardView.setBackgroundColor(Color.rgb(188, 245, 197));
+        }
+        else {
+            holder.cardView.setBackgroundColor(Color.rgb(245, 197, 66));
         }
 
-        holder.cellLayout.setOnClickListener(new View.OnClickListener() {
+        holder.cardView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 Intent intent = new Intent(context, MapsActivity.class);
@@ -109,12 +117,12 @@ public class PlaceListAdapter extends RecyclerView.Adapter<PlaceListAdapter.Plac
     public class PlaceListHolder extends RecyclerView.ViewHolder {
 
         TextView placeName;
-        ConstraintLayout cellLayout;
+        CardView cardView;
 
         public PlaceListHolder(@NonNull View itemView) {
             super(itemView);
             placeName = itemView.findViewById(R.id.place_name);
-            cellLayout = itemView.findViewById(R.id.place_list_cell);
+            cardView = itemView.findViewById(R.id.place_list_cell);
         }
     }
 }

@@ -1,9 +1,12 @@
 package com.example.placestovisit;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
 import android.Manifest;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.location.Address;
 import android.location.Geocoder;
@@ -149,6 +152,67 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
             }
         });
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        if(item.getItemId() == R.id.show_info) {
+            AlertDialog.Builder builder = new AlertDialog.Builder(MapsActivity.this);
+            builder.setTitle("Welcome to My Place List!");
+            builder.setMessage("This is an app where you can save the places you want to visit." +
+                    "To save a place simply click on + button and you will be taken to a map scree." +
+                    "You can then simply long tap on map to add a place. Pressing on the star button will save the location!");
+
+            builder.setPositiveButton("Continue with tutorial", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialogInterface, int i) {
+                    AlertDialog.Builder builder = new AlertDialog.Builder(MapsActivity.this);
+                    builder.setTitle("Navigating the list view!");
+                    builder.setMessage("Once you have marked a place as favorite, you can see that on your home page." +
+                            "You can swipe right to mark it as visited, and the cell will highlight as Green as confirmation." +
+                            "You can also delete the place by swiping left.");
+                    builder.setPositiveButton("Continue with tutorial", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialogInterface, int i) {
+                            AlertDialog.Builder builder = new AlertDialog.Builder(MapsActivity.this);
+                            builder.setTitle("Navigating the map view!");
+                            builder.setMessage("You can open a place by tapping on its cell. Once opened, you can drag marker to" +
+                                    "change the place. You can press on star button again to delete the place. You can get directions" +
+                                    " to the place by pressing the directions button, and you can search for place on search bar");
+
+                            builder.setPositiveButton("Continue with tutorial", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialogInterface, int i) {
+                                    AlertDialog.Builder builder = new AlertDialog.Builder(MapsActivity.this);
+                                    builder.setTitle("Searching for places!");
+                                    builder.setMessage("You can add the place as favorite by tapping on the search results icon, and that" +
+                                            " will save it as your favorite, or replace it if you opened previously saved marker. You can" +
+                                            " see the distance and duration from the place on your app.");
+
+                                    builder.setNegativeButton("Start using the app!", null);
+                                    AlertDialog dialog = builder.create();
+                                    dialog.show();
+                                }
+                            });
+                            builder.setNegativeButton("Start using the app!", null);
+                            AlertDialog dialog = builder.create();
+                            dialog.show();
+                        }
+                    });
+                    builder.setNegativeButton("Start using the app!", null);
+                    AlertDialog dialog = builder.create();
+                    dialog.show();
+                }
+            });
+            builder.setNegativeButton("Start using the app!", null);
+            AlertDialog dialog = builder.create();
+            dialog.show();
+
+            return true;
+        }
+        else {
+            return super.onOptionsItemSelected(item);
+        }
     }
 
 //map view and button handlers
