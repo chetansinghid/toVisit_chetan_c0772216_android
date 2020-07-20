@@ -13,7 +13,11 @@ import android.app.Application;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
+import android.widget.SearchView;
 import android.widget.Toast;
 
 import com.example.placestovisit.dataHandler.Place;
@@ -39,6 +43,40 @@ public class PlaceListActivity extends AppCompatActivity {
         setupRecyclerView();
         setupItemTouch();
     }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        MenuInflater menuInflater = getMenuInflater();
+        menuInflater.inflate(R.menu.maps_menu, menu);
+        MenuItem searchItem = menu.findItem(R.id.search_place);
+        SearchView searchView = (SearchView) searchItem.getActionView();
+
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @Override
+            public boolean onQueryTextSubmit(String s) {
+                return false;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String s) {
+                resetResults();
+//                contactCountView.setVisibility(View.GONE);
+                placeListAdapter.getFilter().filter(s);
+                return false;
+            }
+        });
+
+        searchView.setOnCloseListener(new SearchView.OnCloseListener() {
+            @Override
+            public boolean onClose() {
+                resetResults();
+//                contactCountView.setVisibility(View.VISIBLE);
+                return false;
+            }
+        });
+        return true;
+    }
+
 
     private void setupInitialViewsAndData() {
         recyclerView = findViewById(R.id.recycler_view);

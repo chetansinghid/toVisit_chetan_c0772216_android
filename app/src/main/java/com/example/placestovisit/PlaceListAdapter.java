@@ -6,6 +6,8 @@ import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Filter;
+import android.widget.Filterable;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -17,7 +19,7 @@ import com.example.placestovisit.dataHandler.Place;
 import java.util.ArrayList;
 import java.util.List;
 
-public class PlaceListAdapter extends RecyclerView.Adapter<PlaceListAdapter.PlaceListHolder> {
+public class PlaceListAdapter extends RecyclerView.Adapter<PlaceListAdapter.PlaceListHolder> implements Filterable {
 
     private Context context;
     private List<Place> placeList = new ArrayList<>();
@@ -67,6 +69,42 @@ public class PlaceListAdapter extends RecyclerView.Adapter<PlaceListAdapter.Plac
     public void updateData(List<Place> placeList) {
         this.placeList = placeList;
     }
+
+    @Override
+    public Filter getFilter() {
+        return placeFilter;
+    }
+
+    private Filter placeFilter = new Filter() {
+        @Override
+        protected FilterResults performFiltering(CharSequence charSequence) {
+            List<Place> filteredPlace = new ArrayList<>();
+            if(charSequence == null || charSequence.length() == 0) {
+                filteredPlace.addAll(placeList);
+            }
+            else {
+                String filterPattern = charSequence.toString().toLowerCase().trim();
+
+                for(Place place: placeList) {
+                    if(place.getPlaceName().toLowerCase().trim().contains(filterPattern) ||
+                            place.getPlaceDetails().toLowerCase().trim().contains(filterPattern)) {
+                        filteredPlace.add(place);
+                    }
+                }
+            }
+
+            FilterResults filterResults = new FilterResults();
+            filterResults.values = filteredPlace;
+            return filterResults;
+        }
+
+        @Override
+        protected void publishResults(CharSequence charSequence, FilterResults filterResults) {
+            placeList.clear();
+            placeList.addAll((List<Place>) filterResults.values);
+            notifyDataSetChanged();
+        }
+    };
 
     public class PlaceListHolder extends RecyclerView.ViewHolder {
 
