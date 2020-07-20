@@ -65,7 +65,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 //    constant strings
     private static final long UPDATE_INTERVAL = 5000;
     private static final long FASTEST_INTERVAL = 3000;
-    private static final int RADIUS = 1500;
+    private static final int RADIUS = 5000;
 
     // use the fused location provider client
     private FusedLocationProviderClient fusedLocationProviderClient;
