@@ -38,6 +38,7 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
@@ -84,135 +85,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         setupDatabaseMethods();
         setupButtonsAndTextViews();
         setupSpinnerHandler();
-    }
-// button handlers
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        MenuInflater menuInflater = getMenuInflater();
-        menuInflater.inflate(R.menu.maps_menu, menu);
-        MenuItem searchItem = menu.findItem(R.id.search_place);
-        SearchView searchView = (SearchView) searchItem.getActionView();
-
-        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
-            @Override
-            public boolean onQueryTextSubmit(String s) {
-                showNearbyPlaces(getPlaceUrl(s));
-                return false;
-            }
-
-            @Override
-            public boolean onQueryTextChange(String s) {
-                return false;
-            }
-        });
-
-        searchView.setOnCloseListener(new SearchView.OnCloseListener() {
-            @Override
-            public boolean onClose() {
-                mMap.clear();
-                if(myPlaceMarker != null) {
-                    addMarkerToMap(myPlacePosition);
-                }
-                return false;
-            }
-        });
-        return true;
-    }
-
-    private void setupButtonsAndTextViews() {
-        showDistanceView = findViewById(R.id.distance_text_view);
-        showDistanceDetailsView = findViewById(R.id.distance_text_view_details);
-    }
-
-    private void setupDatabaseMethods() {
-        placesHelperRepository = new PlacesHelperRepository(MapsActivity.this.getApplication());
-    }
-
-    private void setupSpinnerHandler() {
-        Spinner spinner = findViewById(R.id.select_maps);
-        ArrayAdapter<CharSequence> spinnerAdapter = ArrayAdapter.createFromResource(this, R.array.map_types, android.R.layout.simple_spinner_item);
-        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        spinner.setAdapter(spinnerAdapter);
-        spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
-                switch (i) {
-                    case 0:  mMap.setMapType(GoogleMap.MAP_TYPE_NORMAL);
-                        break;
-                    case 1: mMap.setMapType(GoogleMap.MAP_TYPE_HYBRID);
-                        break;
-                    case 2: mMap.setMapType(GoogleMap.MAP_TYPE_SATELLITE);
-                        break;
-                    case 3: mMap.setMapType(GoogleMap.MAP_TYPE_TERRAIN);
-                }
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> adapterView) {
-
-            }
-        });
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-        if(item.getItemId() == R.id.show_info) {
-            AlertDialog.Builder builder = new AlertDialog.Builder(MapsActivity.this);
-            builder.setTitle("Welcome to My Place List!");
-            builder.setMessage("This is an app where you can save the places you want to visit." +
-                    "To save a place simply click on + button and you will be taken to a map scree." +
-                    "You can then simply long tap on map to add a place. Pressing on the star button will save the location!");
-
-            builder.setPositiveButton("Continue with tutorial", new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialogInterface, int i) {
-                    AlertDialog.Builder builder = new AlertDialog.Builder(MapsActivity.this);
-                    builder.setTitle("Navigating the list view!");
-                    builder.setMessage("Once you have marked a place as favorite, you can see that on your home page." +
-                            "You can swipe right to mark it as visited, and the cell will highlight as Green as confirmation." +
-                            "You can also delete the place by swiping left.");
-                    builder.setPositiveButton("Continue with tutorial", new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialogInterface, int i) {
-                            AlertDialog.Builder builder = new AlertDialog.Builder(MapsActivity.this);
-                            builder.setTitle("Navigating the map view!");
-                            builder.setMessage("You can open a place by tapping on its cell. Once opened, you can drag marker to" +
-                                    "change the place. You can press on star button again to delete the place. You can get directions" +
-                                    " to the place by pressing the directions button, and you can search for place on search bar");
-
-                            builder.setPositiveButton("Continue with tutorial", new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialogInterface, int i) {
-                                    AlertDialog.Builder builder = new AlertDialog.Builder(MapsActivity.this);
-                                    builder.setTitle("Searching for places!");
-                                    builder.setMessage("You can add the place as favorite by tapping on the search results icon, and that" +
-                                            " will save it as your favorite, or replace it if you opened previously saved marker. You can" +
-                                            " see the distance and duration from the place on your app.");
-
-                                    builder.setNegativeButton("Start using the app!", null);
-                                    AlertDialog dialog = builder.create();
-                                    dialog.show();
-                                }
-                            });
-                            builder.setNegativeButton("Start using the app!", null);
-                            AlertDialog dialog = builder.create();
-                            dialog.show();
-                        }
-                    });
-                    builder.setNegativeButton("Start using the app!", null);
-                    AlertDialog dialog = builder.create();
-                    dialog.show();
-                }
-            });
-            builder.setNegativeButton("Start using the app!", null);
-            AlertDialog dialog = builder.create();
-            dialog.show();
-
-            return true;
-        }
-        else {
-            return super.onOptionsItemSelected(item);
-        }
     }
 
 //map view and button handlers
@@ -461,7 +333,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             public void onLocationResult(LocationResult locationResult) {
                 Location location = locationResult.getLastLocation();
                 myLocation = new LatLng(location.getLatitude(), location.getLongitude());
-//                setupCameraZoom();
+                setupCameraZoom();
                 Log.i("im method!", "Location getting set");
             }
         };
@@ -472,14 +344,16 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private void setupCameraZoom() {
         if(isNew) {
             if(myLocation != null) {
-                mMap.moveCamera(CameraUpdateFactory.newLatLng(myLocation));
+                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(myLocation, 10));
             }
         }
         else {
             if(myLocation != null) {
-                double lat = (myPlacePosition.latitude + myLocation.latitude) / 2;
-                double lon = (myLocation.longitude + myPlacePosition.longitude) / 2;
-                mMap.moveCamera(CameraUpdateFactory.newLatLng(new LatLng(lat, lon)));
+                LatLngBounds.Builder b = new LatLngBounds.Builder();
+                b.include(myLocation);
+                b.include(myPlacePosition);
+
+                mMap.moveCamera(CameraUpdateFactory.newLatLngBounds(b.build(), 300 ));
             }
         }
     }
@@ -488,4 +362,135 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     public void destinationSelected() {
 
     }
+
+    // button handlers
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        MenuInflater menuInflater = getMenuInflater();
+        menuInflater.inflate(R.menu.maps_menu, menu);
+        MenuItem searchItem = menu.findItem(R.id.search_place);
+        SearchView searchView = (SearchView) searchItem.getActionView();
+
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @Override
+            public boolean onQueryTextSubmit(String s) {
+                showNearbyPlaces(getPlaceUrl(s));
+                return false;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String s) {
+                return false;
+            }
+        });
+
+        searchView.setOnCloseListener(new SearchView.OnCloseListener() {
+            @Override
+            public boolean onClose() {
+                mMap.clear();
+                if(myPlaceMarker != null) {
+                    addMarkerToMap(myPlacePosition);
+                }
+                return false;
+            }
+        });
+        return true;
+    }
+
+    private void setupButtonsAndTextViews() {
+        showDistanceView = findViewById(R.id.distance_text_view);
+        showDistanceDetailsView = findViewById(R.id.distance_text_view_details);
+    }
+
+    private void setupDatabaseMethods() {
+        placesHelperRepository = new PlacesHelperRepository(MapsActivity.this.getApplication());
+    }
+
+    private void setupSpinnerHandler() {
+        Spinner spinner = findViewById(R.id.select_maps);
+        ArrayAdapter<CharSequence> spinnerAdapter = ArrayAdapter.createFromResource(this, R.array.map_types, android.R.layout.simple_spinner_item);
+        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinner.setAdapter(spinnerAdapter);
+        spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
+                switch (i) {
+                    case 0:  mMap.setMapType(GoogleMap.MAP_TYPE_NORMAL);
+                        break;
+                    case 1: mMap.setMapType(GoogleMap.MAP_TYPE_HYBRID);
+                        break;
+                    case 2: mMap.setMapType(GoogleMap.MAP_TYPE_SATELLITE);
+                        break;
+                    case 3: mMap.setMapType(GoogleMap.MAP_TYPE_TERRAIN);
+                }
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> adapterView) {
+
+            }
+        });
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        if(item.getItemId() == R.id.show_info) {
+            AlertDialog.Builder builder = new AlertDialog.Builder(MapsActivity.this);
+            builder.setTitle("Welcome to My Place List!");
+            builder.setMessage("This is an app where you can save the places you want to visit." +
+                    "To save a place simply click on + button and you will be taken to a map scree." +
+                    "You can then simply long tap on map to add a place. Pressing on the star button will save the location!");
+
+            builder.setPositiveButton("Continue with tutorial", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialogInterface, int i) {
+                    AlertDialog.Builder builder = new AlertDialog.Builder(MapsActivity.this);
+                    builder.setTitle("Navigating the list view!");
+                    builder.setMessage("Once you have marked a place as favorite, you can see that on your home page." +
+                            "You can swipe right to mark it as visited, and the cell will highlight as Green as confirmation." +
+                            "You can also delete the place by swiping left.");
+                    builder.setPositiveButton("Continue with tutorial", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialogInterface, int i) {
+                            AlertDialog.Builder builder = new AlertDialog.Builder(MapsActivity.this);
+                            builder.setTitle("Navigating the map view!");
+                            builder.setMessage("You can open a place by tapping on its cell. Once opened, you can drag marker to" +
+                                    "change the place. You can press on star button again to delete the place. You can get directions" +
+                                    " to the place by pressing the directions button, and you can search for place on search bar");
+
+                            builder.setPositiveButton("Continue with tutorial", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialogInterface, int i) {
+                                    AlertDialog.Builder builder = new AlertDialog.Builder(MapsActivity.this);
+                                    builder.setTitle("Searching for places!");
+                                    builder.setMessage("You can add the place as favorite by tapping on the search results icon, and that" +
+                                            " will save it as your favorite, or replace it if you opened previously saved marker. You can" +
+                                            " see the distance and duration from the place on your app.");
+
+                                    builder.setNegativeButton("Start using the app!", null);
+                                    AlertDialog dialog = builder.create();
+                                    dialog.show();
+                                }
+                            });
+                            builder.setNegativeButton("Start using the app!", null);
+                            AlertDialog dialog = builder.create();
+                            dialog.show();
+                        }
+                    });
+                    builder.setNegativeButton("Start using the app!", null);
+                    AlertDialog dialog = builder.create();
+                    dialog.show();
+                }
+            });
+            builder.setNegativeButton("Start using the app!", null);
+            AlertDialog dialog = builder.create();
+            dialog.show();
+
+            return true;
+        }
+        else {
+            return super.onOptionsItemSelected(item);
+        }
+    }
+
 }
